@@ -154,6 +154,7 @@ def trade(orders, wait=30):
 
 def main():
     done = None
+    logging.info('start running')
     while True:
         now = pd.Timestamp.now(tz=NY)
         if 0 <= now.dayofweek <= 4 and done != now.strftime('%Y-%m-%d'):
