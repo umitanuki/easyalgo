@@ -22,26 +22,10 @@ def prices(symbols):
     if now.time() >= pd.Timestamp('09:30', tz=NY).time():
         end_dt = now - pd.Timedelta(now.strftime('%H:%M:%S')) - pd.Timedelta('1 minute')
     result = api.list_bars(symbols, '1D', end_dt=end_dt.isoformat())
-    for asset_bar in result:
-        symbol = asset_bar.symbol
-        bars = asset_bar.bars
-        index = []
-        d = {
-            'open': [],
-            'high': [],
-            'low': [],
-            'close': [],
-            'volume': [],
-        }
-        for bar in bars:
-            index.append(pd.Timestamp(bar.time))
-            d['open'].append(float(bar.open))
-            d['high'].append(float(bar.high))
-            d['low'].append(float(bar.low))
-            d['close'].append(float(bar.close))
-            d['volume'].append(int(bar.volume))
-        dfs[symbol] = pd.DataFrame(d, index=index)
-    return dfs
+    return {
+        ab.symbol: ab.df for ab in result
+    }
+
 
 def calc(dfs, dayindex=-1):
     diffs = {}
@@ -57,7 +41,7 @@ def calc(dfs, dayindex=-1):
     return sorted(diffs.items(), key=lambda x: x[1])
 
 
-def get_orders(position_size=100):
+def get_orders(position_size=100, max_position=5):
     positions = api.list_positions()
     dfs = prices(Universe)
     cands = calc(dfs)
@@ -83,11 +67,10 @@ def get_orders(position_size=100):
             'side': 'sell',
         })
         logger.info(f'order(sell): {symbol} for {shares}')
-        # try:
-        #     api.submit_order(symbol=symbol, qty=shares, type='market', side='sell', time_in_force='day')
-        # except Exception as e:
-        #     print(e)
+    max_to_buy = max_position - (len(positions) - len(to_sell))
     for symbol in to_buy:
+        if max_to_buy <= 0:
+            break
         shares = position_size // float(dfs[symbol].close.values[-1])
         if shares == 0.0:
             continue
@@ -97,10 +80,7 @@ def get_orders(position_size=100):
             'side': 'buy',
         })
         logger.info(f'order(buy): {symbol} for {shares}')
-        # try:
-        #     api.submit_order(symbol=symbol, qty=shares, type='market', side='buy', time_in_force='day')
-        # except Exception as e:
-        #     print(e)
+        max_to_buy -= 1
     return orders
 
     # orders = api.list_orders()
