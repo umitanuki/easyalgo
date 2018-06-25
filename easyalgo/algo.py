@@ -21,7 +21,7 @@ def prices(symbols):
     end_dt = now
     if now.time() >= pd.Timestamp('09:30', tz=NY).time():
         end_dt = now - pd.Timedelta(now.strftime('%H:%M:%S')) - pd.Timedelta('1 minute')
-    result = api.list_bars(symbols, '1D', end_dt=end_dt.isoformat())
+    result = api.list_bars(symbols, '1D', end_dt=end_dt.isoformat(), limit=1200)
     return {
         ab.symbol: ab.df for ab in result
     }
